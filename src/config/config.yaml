@@ -1,0 +1,23 @@
+data:
+  raw_path: data/raw/water_potability_kraggle_dataset.csv
+  processed_path: data/processed/
+  test_size: 0.2
+  random_state: 42
+
+model:
+  type: "random_forest"
+  params:
+    n_estimators: 200 # Number of trees in the forest
+    max_depth: 10  # Maximum depth of the trees
+    min_samples_split: 2 # Minimum samples required to split a node
+    min_samples_leaf: 1 # Minimum samples required at each leaf node
+    random_state: 42 # Seed for reproducibility
+
+metrics:
+  log_path: models/model_metrics.json
+  
+output:
+  model_path: models/v1_random_forest.pkl
+
+logging:
+  training_log: logs/training.log
