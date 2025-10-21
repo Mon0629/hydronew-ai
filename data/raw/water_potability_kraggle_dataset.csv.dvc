@@ -1,0 +1,5 @@
+outs:
+- md5: fb027162851dae15ca3cd0ae7e174940
+  size: 177875
+  hash: md5
+  path: water_potability_kraggle_dataset.csv

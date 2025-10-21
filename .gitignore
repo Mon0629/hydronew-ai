@@ -20,10 +20,22 @@ environment.yml
 
 .ipynb_checkpoints/
 
-ai/data/raw/
-ai/data/processed/
-ai/data/interim/
-ai/data/external/
+
+data/raw/*
+!data/raw/*.dvc
+
+
+data/processed/*
+!data/processed/*.dvc
+
+
+data/interim/
+data/external/
+
+
+ai/models/*
+!ai/models/*.dvc
+
 
 
 ai/models/
