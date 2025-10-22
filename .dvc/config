@@ -1,8 +1,6 @@
 [core]
-remote = local_storage
-
+remote = dvc_remote
 [cache]
-dir = .dvc/cache
-
-[remote "local_storage"]
-url = ../dvc_remote
+dir = ".dvc/cache"
+['remote "dvc_remote"']
+url = "gdrive://1-jAU7mWoxd_nmGSNdt_JqQsCYHVSnLaS"
