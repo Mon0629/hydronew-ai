@@ -1,0 +1,8 @@
+[core]
+remote = local_storage
+
+[cache]
+dir = .dvc/cache
+
+[remote "local_storage"]
+url = ../dvc_remote
