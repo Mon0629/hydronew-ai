@@ -21,17 +21,15 @@ environment.yml
 .ipynb_checkpoints/
 
 
-data/raw/*
-!data/raw/*.dvc
-
-
-data/processed/*
-!data/processed/*.dvc
-
-
-data/interim/
-data/external/
-
+data/external/**
+!data/external/**/*.dvc
+!data/external/.gitignore
+data/processed/**
+!data/processed/**/*.dvcS
+data/interim/**
+!data/interim/**/*.dvc
+data/raw/**
+!data/raw/**/*.dvc
 
 ai/models/*
 !ai/models/*.dvc
