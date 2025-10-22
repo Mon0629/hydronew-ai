@@ -1,42 +1,43 @@
-
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.env
-.env/
 *.egg-info/
 *.egg
 *.sqlite3
-venv/
-__pycache__/
-env/
-.env
+
+
 .venv/
+venv/
+env/
+*.env
+.env/
+
 
 environment.yml
 *.conda
 
-
 .ipynb_checkpoints/
 
 
-data/external/**
-!data/external/**/*.dvc
-!data/external/.gitignore
-data/processed/**
-!data/processed/**/*.dvcS
-data/interim/**
-!data/interim/**/*.dvc
 data/raw/**
 !data/raw/**/*.dvc
 
-ai/models/*
-!ai/models/*.dvc
+data/interim/**
+!data/interim/**/*.dvc
+
+data/processed/**
+!data/processed/**/*.dvc
+
+data/external/**
+!data/external/**/*.dvc
+
+!data/**/.gitignore
+
+ai/models/**
+!ai/models/**/*.dvc
 
 
-
-ai/models/
 *.pkl
 *.joblib
 *.h5
@@ -44,29 +45,25 @@ ai/models/
 *.onnx
 *.pt
 *.pth
-*.json    # Only if it contains metrics, optional: track if needed
-*.png     # Visualizations
-*.html    # SHAP explainability reports
+*.tar
+*.img
+*.tmp
+
+*.json   # (ignore only if used for metrics or logs)
+*.png
+*.html
 
 
 ai/logs/
 *.log
-
-
 ai/experiments/mlruns/
 ai/experiments/results_summary.csv
-
-
-*.tar
-*.img
-*.tmp
 
 
 ai/security/credentials/
 *.key
 *.pem
-*.json     # Only if contains credentials
-
+*.json  # (only if used for credentials)
 
 *.swp
 *.DS_Store
