@@ -1,6 +1,19 @@
 data:
-  raw_path: data/raw/water_potability_kraggle_dataset.csv
-  processed_path: data/processed/
+  required_columns:
+    - ph
+    - turbidity
+    - tds
+    - potability
+  raw_path: data/raw/water_potability_data.csv
+  train_processed_path: data/processed/water_quality_processed_train.csv
+  test_processed_path: data/processed/water_quality_processed_test.csv
+
+  missing_value_strategy:
+    ph: "mean"
+    turbidity: "median"
+    tds: "mean"
+    potability: "mode"
+
   test_size: 0.2
   random_state: 42
 
@@ -13,6 +26,10 @@ model:
     min_samples_leaf: 1 # Minimum samples required at each leaf node
     random_state: 42 # Seed for reproducibility
 
+  model_path: models/v1_random_forest.pkl
+  label_encoder_path: data/processed/label_encoder.pkl
+
+
 metrics:
   log_path: models/model_metrics.json
   
@@ -20,4 +37,7 @@ output:
   model_path: models/v1_random_forest.pkl
 
 logging:
+  preprocessing_log: logs/preprocessing.log
   training_log: logs/training.log
+  evaluation_log: logs/evaluation.log
+  level: INFO
