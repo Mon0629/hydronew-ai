@@ -1,3 +1,4 @@
+# Python caches
 __pycache__/
 *.py[cod]
 *.pyo
@@ -6,66 +7,39 @@ __pycache__/
 *.egg
 *.sqlite3
 
-
+# Virtual environments
 .venv/
 venv/
 env/
 *.env
 .env/
 
-
+# Conda environment files
 environment.yml
 *.conda
 
+# Jupyter checkpoints
 .ipynb_checkpoints/
 
-
-data/raw/**
-!data/raw/**/*.dvc
-
-data/interim/**
-!data/interim/**/*.dvc
-
-data/processed/**
-!data/processed/**/*.dvc
-
-data/external/**
-!data/external/**/*.dvc
-
-!data/**/.gitignore
-
-ai/models/**
-!ai/models/**/*.dvc
-
-
-*.pkl
-*.joblib
-*.h5
-*.ckpt
-*.onnx
-*.pt
-*.pth
-*.tar
-*.img
-*.tmp
-
-*.json   # (ignore only if used for metrics or logs)
-*.png
-*.html
-
-
+# Logs
 ai/logs/
 *.log
-ai/experiments/mlruns/
-ai/experiments/results_summary.csv
 
-
+# Security credentials
 ai/security/credentials/
 *.key
 *.pem
-*.json  # (only if used for credentials)
+*.json   # ignore only if used for credentials
 
+# Temporary or swap files
 *.swp
 *.DS_Store
 .vscode/
 .idea/
+
+# Experiments
+ai/experiments/mlruns/
+ai/experiments/results_summary.csv
+
+# Ignore only temporary/intermediate model files if any
+*.tmp
