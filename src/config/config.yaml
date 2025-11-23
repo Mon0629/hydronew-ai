@@ -1,43 +1,71 @@
 data:
+  raw_path: data/raw/sensor_data_20251122.csv
+  train_processed_path: data/processed/processed_data_train.csv
+  test_processed_path: data/processed/processed_data_test.csv
+  invalid_records_path: data/invalid/  
+
   required_columns:
     - ph
     - turbidity
     - tds
-    - potability
-  raw_path: data/raw/water_potability_data.csv
-  train_processed_path: data/processed/water_quality_processed_train.csv
-  test_processed_path: data/processed/water_quality_processed_test.csv
+    - status
+
+  feature_columns:
+    - ph
+    - turbidity
+    - tds
+
+  label_column: status
+
+  validation:
+    ph:
+      min: 0
+      max: 14
+    turbidity:
+      min: 0
+      max: 10000
+    tds:
+      min: 0
+      max: 100000
+    status:
+      allowed_values: [0, 1]
+    timestamp:
+      format: "%Y-%m-%d %H:%M:%S"
+      required: true
 
   missing_value_strategy:
     ph: "mean"
     turbidity: "median"
     tds: "mean"
-    potability: "mode"
+    status: "mode"
 
   test_size: 0.2
   random_state: 42
 
 model:
+  version: 1
+  base_path: models/
+  filename: random_forest.pkl
+
   type: "random_forest"
   params:
-    n_estimators: 200 # Number of trees in the forest
-    max_depth: 10  # Maximum depth of the trees
-    min_samples_split: 2 # Minimum samples required to split a node
-    min_samples_leaf: 1 # Minimum samples required at each leaf node
-    random_state: 42 # Seed for reproducibility
+    n_estimators: 200
+    max_depth: 15
+    min_samples_split: 2
+    min_samples_leaf: 1
+    random_state: 42
+    class_weight: "balanced"
 
-  model_path: models/v1_random_forest.pkl
   label_encoder_path: data/processed/label_encoder.pkl
 
-
 metrics:
-  log_path: models/model_metrics.json
-  
-output:
-  model_path: models/v1_random_forest.pkl
+  confusion_matrix_path: metrics/confusion_matrix.json
+  classification_report_path: metrics/classification_report.json
 
 logging:
   preprocessing_log: logs/preprocessing.log
   training_log: logs/training.log
   evaluation_log: logs/evaluation.log
+  prediction_log: logs/prediction.log
+  validation_log: logs/validation.log
   level: INFO
