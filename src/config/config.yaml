@@ -1,5 +1,5 @@
 data:
-  raw_path: data/raw/sensor_data_20251122.csv
+  raw_path: data/raw/water_data_quality.csv
   train_processed_path: data/processed/processed_data_train.csv
   test_processed_path: data/processed/processed_data_test.csv
   invalid_records_path: data/invalid/  
@@ -11,9 +11,22 @@ data:
     - status
 
   feature_columns:
-    - ph
-    - turbidity
-    - tds
+    - ph_distance
+    - tds_distance
+    - turbidity_distance
+
+    - ph_tds_ratio
+    - turbidity_ph_ratio
+    - tds_turbidity_ratio
+
+    - ph_raw
+    - tds_raw
+    - turbidity_raw
+
+    - ph_noise_score
+    - tds_noise_score
+    - turbidity_noise_score
+    - instability_score
 
   label_column: status
 

@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score, log_loss
 import joblib
 import logging
 import json
@@ -11,7 +11,9 @@ from datetime import datetime
 
 from utils import load_config, setup_logging, model_cleanup
 
-
+# -----------------------
+# Helper functions
+# -----------------------
 def get_next_model_version(base_dir, base_name="random_forest"):
     os.makedirs(base_dir, exist_ok=True)
     existing_files = os.listdir(base_dir)
@@ -27,7 +29,14 @@ def get_next_model_version(base_dir, base_name="random_forest"):
     next_model_filename = f"v{next_version}_{base_name}.pkl"
     return os.path.join(base_dir, next_model_filename), next_version
 
+def add_sensor_noise(X, noise_level=0.01):
+    """Add small Gaussian noise to sensor features to prevent memorization."""
+    noise = np.random.normal(0, noise_level, X.shape)
+    return X + noise
 
+# -----------------------
+# Main training function
+# -----------------------
 def train_model(config):
     logging.info("Loading preprocessed training and test data...")
     train_path = config["data"]["train_processed_path"]
@@ -36,19 +45,32 @@ def train_model(config):
     df_test = pd.read_csv(test_path)
 
     feature_cols = [
+        # Distance features
         'ph_distance', 'tds_distance', 'turbidity_distance',
-        'ph_compliant', 'tds_compliant', 'turbidity_compliant',
-        'compliance_score', 'weighted_score',
-        'ph_tds_ratio', 'turbidity_ph_ratio', 'tds_turbidity_ratio'
+        # Ratios
+        'ph_tds_ratio', 'turbidity_ph_ratio', 'tds_turbidity_ratio',
+        # Raw engineered signals
+        'ph_raw', 'tds_raw', 'turbidity_raw',
+        # Noise-sensitive metrics
+        'ph_noise_score', 'tds_noise_score', 'turbidity_noise_score', 'instability_score'
     ]
     label_col = config["data"]["label_column"]
 
+    # Separate features and label
     X_train = df_train[feature_cols]
     y_train = df_train[label_col]
     X_test = df_test[feature_cols]
     y_test = df_test[label_col]
 
-    # SMOTE with safe k_neighbors
+    # -----------------------
+    # Add noise to mimic real sensor variation
+    # -----------------------
+    X_train = add_sensor_noise(X_train, noise_level=0.01)
+    X_test = add_sensor_noise(X_test, noise_level=0.01)
+
+    # -----------------------
+    # Apply SMOTE if minority class exists
+    # -----------------------
     min_class_count = min(y_train.value_counts())
     if min_class_count > 1:
         k_neighbors = min(5, min_class_count - 1)
@@ -58,27 +80,45 @@ def train_model(config):
     else:
         logging.warning("SMOTE skipped: minority class too small.")
 
-    model_params = config["model"]["params"]
+    # -----------------------
+    # Model setup (reduced complexity)
+    # -----------------------
+    model_params = {
+        'n_estimators': 150,
+        'max_depth': 8,
+        'min_samples_leaf': 5,
+        'max_features': 0.7,
+        'random_state': config["data"]["random_state"],
+        'class_weight': 'balanced'
+    }
     model = RandomForestClassifier(**model_params)
 
-    logging.info(f"Training {config['model']['type']} model with parameters: {model_params}")
+    logging.info(f"Training RandomForest model with parameters: {model_params}")
     model.fit(X_train, y_train)
 
+    # -----------------------
+    # Predictions & evaluation
+    # -----------------------
     y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
+
     accuracy = accuracy_score(y_test, y_pred)
     try:
-        roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:,1])
+        roc_auc = roc_auc_score(y_test, y_prob)
     except ValueError:
         roc_auc = float('nan')
         logging.warning("ROC-AUC cannot be computed: only one class in y_test")
+    logloss = log_loss(y_test, y_prob)
     report = classification_report(y_test, y_pred, output_dict=True)
 
-    logging.info(f"Model Accuracy: {accuracy:.4f}, ROC-AUC: {roc_auc}")
+    logging.info(f"Model Accuracy: {accuracy:.4f}, ROC-AUC: {roc_auc:.4f}, Log Loss: {logloss:.4f}")
     logging.info(f"Classification Report: {report}")
 
+    # -----------------------
+    # Save models
+    # -----------------------
     timestamp = datetime.now().strftime("%Y%m%d")
 
-    # Save base model (always overwritten)
     base_model_path = os.path.join(config["model"]["base_path"], config["model"]["filename"])
     os.makedirs(os.path.dirname(base_model_path), exist_ok=True)
     joblib.dump(model, base_model_path)
@@ -86,13 +126,10 @@ def train_model(config):
 
     model_cleanup(config["model"]["base_path"], base_name="random_forest", keep_last_n=5)
 
-    # Save timestamped model (versioned)
-    versioned_model_filename = f"random_forest_{timestamp}.pkl"
-    versioned_model_path = os.path.join(config["model"]["base_path"], versioned_model_filename)
+    versioned_model_path = os.path.join(config["model"]["base_path"], f"random_forest_{timestamp}.pkl")
     joblib.dump(model, versioned_model_path)
     logging.info(f"Saved timestamped model to {versioned_model_path}")
 
-    # Save metrics using same timestamp
     metrics_path = os.path.join("metrics", f"metrics_{timestamp}.json")
     os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
     with open(metrics_path, "w") as f:
@@ -100,13 +137,18 @@ def train_model(config):
             "timestamp": timestamp,
             "accuracy": accuracy,
             "roc_auc": roc_auc,
+            "log_loss": logloss,
             "classification_report": report
         }, f, indent=4)
     logging.info(f"Saved metrics to {metrics_path}")
 
-    print(f"Model training complete! Accuracy: {accuracy:.4f}, ROC-AUC: {roc_auc}")
+    print(f"Model training complete! Accuracy: {accuracy:.4f}, ROC-AUC: {roc_auc:.4f}, Log Loss: {logloss:.4f}")
     print(f"Model saved as {versioned_model_path}")
 
+
+# -----------------------
+# Entry point
+# -----------------------
 if __name__ == "__main__":
     config = load_config()
     setup_logging(config["logging"]["training_log"], level=config["logging"].get("level", "INFO"))

@@ -10,37 +10,69 @@ import joblib
 from utils import load_config, setup_logging
 from validation import validate_dataframe
 
+# ======================
+# THRESHOLDS
+# ======================
+PH_MIN, PH_MAX = 6.5, 8.0
+TDS_MAX = 500
+TURB_MAX = 5
+
+ROLLING_WINDOW = 5
+EPS = 1e-6
+
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Add engineered features based on water treatment thresholds and ratios.
+    Feature engineering for sensor validation & rule aggregation.
+    NO label leakage.
     """
-    # Distance from safe range
-    df['ph_distance'] = np.where(
-        df['ph'] < 6.5,
-        6.5 - df['ph'],
-        np.where(df['ph'] > 8.0, df['ph'] - 8.0, 0)
+
+    # ----------------------
+    # DISTANCE FEATURES
+    # ----------------------
+    df["ph_distance"] = np.where(
+        df["ph"] < PH_MIN,
+        PH_MIN - df["ph"],
+        np.where(df["ph"] > PH_MAX, df["ph"] - PH_MAX, 0)
     )
 
-    # tds distance above threshold 1500
-    df['tds_distance'] = np.where(df['tds'] > 1500, df['tds'] - 1500, 0)
+    df["tds_distance"] = np.maximum(0, df["tds"] - TDS_MAX)
+    df["turbidity_distance"] = np.maximum(0, df["turbidity"] - TURB_MAX)
 
-    # turbidity distance above threshold 5
-    df['turbidity_distance'] = np.where(df['turbidity'] > 5, df['turbidity'] - 5, 0)
+    # ----------------------
+    # RATIO FEATURES
+    # ----------------------
+    df["ph_tds_ratio"] = df["ph"] / (df["tds"] + EPS)
+    df["turbidity_ph_ratio"] = df["turbidity"] / (df["ph"] + EPS)
+    df["tds_turbidity_ratio"] = df["tds"] / (df["turbidity"] + EPS)
 
-    # Binary compliance flags
-    df['ph_compliant'] = ((df['ph'] >= 6.5) & (df['ph'] <= 8.0)).astype(int)
-    df['tds_compliant'] = (df['tds'] < 1500).astype(int)
-    df['turbidity_compliant'] = (df['turbidity'] < 5).astype(int)
+    # ----------------------
+    # RAW ENGINEERED SIGNALS
+    # ----------------------
+    df["ph_raw"] = df["ph"] / 14.0
+    df["tds_raw"] = np.log1p(df["tds"]) / np.log1p(30000)
+    df["turbidity_raw"] = np.log1p(df["turbidity"]) / np.log1p(50)
 
-    # Aggregate scores
-    df['compliance_score'] = df['ph_compliant'] + df['tds_compliant'] + df['turbidity_compliant']
-    df['weighted_score'] = 2*df['ph_compliant'] + df['tds_compliant'] + 2*df['turbidity_compliant']
+    # ----------------------
+    # NOISE-SENSITIVE METRICS
+    # ----------------------
+    df["ph_noise_score"] = np.abs(
+        df["ph"] - df["ph"].rolling(ROLLING_WINDOW, min_periods=1).mean()
+    )
 
-    # Ratios / interaction features
-    df['ph_tds_ratio'] = df['ph'] / (df['tds'] + 1)
-    df['turbidity_ph_ratio'] = df['turbidity'] / (df['ph'] + 1)
-    df['tds_turbidity_ratio'] = df['tds'] / (df['turbidity'] + 1)
+    df["tds_noise_score"] = np.abs(
+        df["tds"] - df["tds"].rolling(ROLLING_WINDOW, min_periods=1).mean()
+    )
+
+    df["turbidity_noise_score"] = np.abs(
+        df["turbidity"] - df["turbidity"].rolling(ROLLING_WINDOW, min_periods=1).mean()
+    )
+
+    df["instability_score"] = (
+        df["ph_noise_score"]
+        + df["tds_noise_score"] / 1000
+        + df["turbidity_noise_score"]
+    )
 
     return df
 
@@ -62,13 +94,16 @@ def preprocess_data(config):
     df = pd.read_csv(raw_path)
     logging.info(f"Loaded dataset with shape: {df.shape}")
 
-    # Validate dataframe
+    # Validate schema & sensor bounds
     df = validate_dataframe(df, config)
 
-    # Handle missing values per-column
+    # ----------------------
+    # MISSING VALUES
+    # ----------------------
     for col, strategy in missing_strategy.items():
         if col not in df.columns:
             continue
+
         if strategy == "mean":
             df[col] = df[col].fillna(df[col].mean())
         elif strategy == "median":
@@ -79,23 +114,37 @@ def preprocess_data(config):
             df[col] = df[col].fillna(0)
         elif strategy == "drop":
             df = df.dropna(subset=[col])
+
         logging.info(f"Applied missing value strategy '{strategy}' to column '{col}'")
 
-    # Feature engineering
+    # ----------------------
+    # FEATURE ENGINEERING
+    # ----------------------
     df = engineer_features(df)
 
     feature_cols = [
-        'ph_distance', 'tds_distance', 'turbidity_distance',
-        'ph_compliant', 'tds_compliant', 'turbidity_compliant',
-        'compliance_score', 'weighted_score',
-        'ph_tds_ratio', 'turbidity_ph_ratio', 'tds_turbidity_ratio'
+        # Distance
+        "ph_distance", "tds_distance", "turbidity_distance",
+
+        # Ratios
+        "ph_tds_ratio", "turbidity_ph_ratio", "tds_turbidity_ratio",
+
+        # Raw engineered
+        "ph_raw", "tds_raw", "turbidity_raw",
+
+        # Noise-sensitive
+        "ph_noise_score", "tds_noise_score",
+        "turbidity_noise_score", "instability_score"
     ]
+
     label_col = data_config["label_column"]
 
     X = df[feature_cols]
     y = df[label_col]
 
-    # Encode labels if needed
+    # ----------------------
+    # LABEL ENCODING
+    # ----------------------
     label_encoder_path = config["model"].get("label_encoder_path")
     if y.dtype == "object" or y.dtype.name == "category":
         encoder = LabelEncoder()
@@ -104,13 +153,21 @@ def preprocess_data(config):
             joblib.dump(encoder, label_encoder_path)
             logging.info(f"Saved label encoder to {label_encoder_path}")
 
-    # Stratified train-test split
+    # ----------------------
+    # TRAIN / TEST SPLIT
+    # ----------------------
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=random_state, stratify=y
+        X, y,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=y
     )
+
     logging.info(f"Train shape: {X_train.shape}, Test shape: {X_test.shape}")
 
-    # Save processed CSVs
+    # ----------------------
+    # SAVE OUTPUT
+    # ----------------------
     train_df = pd.concat([X_train, pd.Series(y_train, name=label_col)], axis=1)
     test_df = pd.concat([X_test, pd.Series(y_test, name=label_col)], axis=1)
 
