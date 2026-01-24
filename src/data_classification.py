@@ -214,8 +214,8 @@ class WaterQualityClassifier:
             logger.info(f"Received message from device: {serial_number}")
             logger.info("="*60)
             
-            # Store processed lines for the response
-            processed_lines = [first_line]  # Keep the serial number line
+            # Store processed water data as JSON objects
+            water_samples = []
             
             # Process each data line (skip the first line which is serial number)
             for line in lines[1:]:
@@ -227,33 +227,45 @@ class WaterQualityClassifier:
                     # Parse IoT data for this line
                     parsed_data = self.parse_iot_data(line)
                     water_type = parsed_data['water_type']
-                    sensor_data = parsed_data['sensor_data']
+                    sensors = parsed_data['sensor_data']
                     
                     logger.info(f"Processing: {water_type}")
-                    logger.info(f"  Sensor Data: {sensor_data}")
+                    logger.info(f"  Sensor Data: {sensors}")
+                    
+                    # Create sample object
+                    sample = {
+                        'water_type': water_type,
+                        'sensors': sensors
+                    }
                     
                     # Only classify clean_water and dirty_water
                     if water_type not in ['clean_water', 'dirty_water']:
                         logger.info(f"  Skipping classification (not clean/dirty water)")
-                        # Keep original line without classification
-                        processed_lines.append(line)
+                        # Add without classification
+                        water_samples.append(sample)
                         continue
                     
                     # Check if we have required sensors (ph, tds, turbidity)
-                    required_sensors = ['ph', 'tds', 'turbidity']
-                    missing_sensors = [s for s in required_sensors if s not in sensor_data]
+                    # Handle both lowercase and uppercase variations
+                    has_ph = 'ph' in sensors or 'pH' in sensors
+                    has_tds = 'tds' in sensors or 'TDS' in sensors
+                    has_turbidity = 'turbidity' in sensors or 'Turbidity' in sensors
                     
-                    if missing_sensors:
-                        logger.warning(f"  Missing required sensors: {missing_sensors}. Cannot classify.")
-                        # Keep original line without classification
-                        processed_lines.append(line)
+                    if not (has_ph and has_tds and has_turbidity):
+                        missing = []
+                        if not has_ph: missing.append('pH')
+                        if not has_tds: missing.append('TDS')
+                        if not has_turbidity: missing.append('Turbidity')
+                        logger.warning(f"  Missing required sensors: {missing}. Cannot classify.")
+                        # Add without classification
+                        water_samples.append(sample)
                         continue
                     
                     # Prepare data for classification (only ph, tds, turbidity)
                     classification_data = {
-                        'ph': sensor_data['ph'],
-                        'tds': sensor_data['tds'],
-                        'turbidity': sensor_data['turbidity']
+                        'ph': sensors['ph'],
+                        'tds': sensors['tds'],
+                        'turbidity': sensors['turbidity']
                     }
                     
                     # Classify
@@ -261,32 +273,25 @@ class WaterQualityClassifier:
                     
                     logger.info(f"  Classification: {result['label']} (confidence: {result['confidence']}%)")
                     
-                    # Build response line with classification results
-                    response_parts = []
+                    # Add classification results to sample
+                    sample['ai_classification'] = result['label']
+                    sample['confidence'] = result['confidence']
                     
-                    # Add all original sensor data
-                    for key, value in sensor_data.items():
-                        response_parts.append(f"{key}:{value}")
-                    
-                    # Add AI classification and confidence
-                    response_parts.append(f"ai_classification:{result['label']}")
-                    response_parts.append(f"confidence:{result['confidence']}")
-                    
-                    # Combine into final line
-                    response_line = f"{water_type},{','.join(response_parts)}"
-                    processed_lines.append(response_line)
+                    water_samples.append(sample)
                     
                 except ValueError as e:
                     logger.error(f"  Invalid data format for line '{line}': {e}")
-                    # Keep original line on error
-                    processed_lines.append(line)
                 except Exception as e:
                     logger.error(f"  Error processing line '{line}': {e}", exc_info=True)
-                    # Keep original line on error
-                    processed_lines.append(line)
             
-            # Combine all processed lines into final payload
-            final_payload = '\n'.join(processed_lines)
+            # Build JSON payload
+            json_payload = {
+                'device_serial_number': serial_number,
+                'sensor_data': water_samples
+            }
+            
+            # Convert to JSON string
+            final_payload = json.dumps(json_payload, indent=2)
             
             # Publish to backend topic
             backend_topic = "hydronew/ai-classification/backend"
@@ -294,7 +299,6 @@ class WaterQualityClassifier:
             
             logger.info("-"*60)
             logger.info(f"Published to: {backend_topic}")
-            logger.info(f"Total lines: {len(processed_lines)} (including serial number)")
             logger.info("="*60)
             
         except Exception as e:

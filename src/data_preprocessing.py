@@ -7,8 +7,8 @@ from sklearn.preprocessing import LabelEncoder
 import logging
 import joblib
 
-from utils import load_config, setup_logging
-from validation import validate_dataframe
+from .utils import load_config, setup_logging
+from .validation import validate_dataframe
 
 # ======================
 # THRESHOLDS

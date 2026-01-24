@@ -9,7 +9,7 @@ import json
 from imblearn.over_sampling import SMOTE
 from datetime import datetime
 
-from utils import load_config, setup_logging, model_cleanup
+from .utils import load_config, setup_logging, model_cleanup
 
 # -----------------------
 # Helper functions

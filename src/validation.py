@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 import logging
-from utils import load_config, setup_logging
+from .utils import load_config, setup_logging
 
 
 config = load_config()
