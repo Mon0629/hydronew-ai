@@ -56,18 +56,27 @@ class WaterQualityClassifier:
         logger.info("Water Quality Classification Service Started")
         logger.info("="*60)
     
-    def load_model(self):
-        """Load the trained model from disk."""
-        try:
-            if not self.model_path.exists():
-                raise FileNotFoundError(f"Model not found at: {self.model_path}")
-            
-            self.model = joblib.load(self.model_path)
-            logger.info(f"Model loaded successfully from: {self.model_path}")
-            
-        except Exception as e:
-            logger.error(f"Failed to load model: {e}")
-            raise
+   def load_model(self):
+    """Load the trained model from disk."""
+    try:
+        logger.info(f"MODEL PATH (resolved): {self.model_path.resolve()}")
+        logger.info(f"MODEL EXISTS: {self.model_path.exists()}")
+        if self.model_path.exists():
+            size = self.model_path.stat().st_size
+            logger.info(f"MODEL SIZE BYTES: {size}")
+            with open(self.model_path, "rb") as f:
+                head = f.read(32)
+            logger.info(f"MODEL HEAD(32): {head!r}")
+
+        if not self.model_path.exists():
+            raise FileNotFoundError(f"Model not found at: {self.model_path}")
+
+        self.model = joblib.load(self.model_path)
+        logger.info(f"Model loaded successfully from: {self.model_path}")
+
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}", exc_info=True)
+        raise
     
     def engineer_features(self, data: dict) -> pd.DataFrame:
 
