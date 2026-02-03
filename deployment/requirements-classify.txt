@@ -3,7 +3,7 @@
 
 PyYAML>=6.0
 joblib==1.5.2
-numpy==2.3.4
+numpy>=1.24,<2
 pandas==2.3.3
 python-dotenv==1.1.1
 paho-mqtt==2.1.0
