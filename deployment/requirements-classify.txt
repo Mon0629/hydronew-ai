@@ -1,0 +1,11 @@
+# Minimal requirements for: python run_pipeline.py classify
+# Use this for Railway deployment of the classification service
+
+PyYAML>=6.0
+joblib==1.5.2
+numpy==2.3.4
+pandas==2.3.3
+python-dotenv==1.1.1
+paho-mqtt==2.1.0
+mysql-connector-python==8.2.0
+scikit-learn==1.7.2
