@@ -3,7 +3,7 @@
 # - Runs as non-root user
 # - Default runtime tries common entrypoints; override with docker run or docker-compose
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONDONTWRITEBYTECODE=1 \
