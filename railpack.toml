@@ -1,0 +1,13 @@
+[phases.setup]
+aptPkgs = ["git", "git-lfs"]
+
+[phases.install]
+cmds = [
+  "git lfs install",
+  "git lfs pull",
+  "python -m venv /app/.venv",
+  "pip install -r requirements.txt"
+]
+
+[start]
+cmd = "python run_pipeline.py classify"
