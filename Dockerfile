@@ -2,9 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (for building wheels: pygit2, cryptography, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libgit2-dev \
+    libssl-dev \
+    libffi-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
