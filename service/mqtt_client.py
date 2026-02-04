@@ -23,7 +23,7 @@ class MQTTClient:
         port: int = 8883,
         username: str = "Biotech",
         password: str = "Momorevillame24",
-        client_id: str = "hydronew_ai_client"
+        client_id: str = "hydronew_ai_classification"
     ):
 
         self.broker = broker

@@ -13,7 +13,8 @@ from .validation import validate_dataframe
 # ======================
 # THRESHOLDS
 # ======================
-PH_MIN, PH_MAX = 6.5, 8.0
+# pH: good when >= 6.5 (acidic below 6.5 is bad; 6.5 and above including alkaline is good)
+PH_MIN = 6.5
 TDS_MAX = 500
 TURB_MAX = 5
 
@@ -30,11 +31,8 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     # ----------------------
     # DISTANCE FEATURES
     # ----------------------
-    df["ph_distance"] = np.where(
-        df["ph"] < PH_MIN,
-        PH_MIN - df["ph"],
-        np.where(df["ph"] > PH_MAX, df["ph"] - PH_MAX, 0)
-    )
+    # Only penalize when pH < 6.5 (acidic). pH >= 6.5 is good (including alkaline > 8).
+    df["ph_distance"] = np.where(df["ph"] < PH_MIN, PH_MIN - df["ph"], 0)
 
     df["tds_distance"] = np.maximum(0, df["tds"] - TDS_MAX)
     df["turbidity_distance"] = np.maximum(0, df["turbidity"] - TURB_MAX)

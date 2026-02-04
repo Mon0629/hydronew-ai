@@ -35,7 +35,8 @@ class WaterQualityClassifier:
 
     
     # Thresholds from preprocessing
-    PH_MIN, PH_MAX = 6.5, 8.0
+    # pH: good when >= 6.5; only bad when < 6.5 (alkaline is good)
+    PH_MIN = 6.5
     TDS_MAX = 500
     TURB_MAX = 5
     EPS = 1e-6
@@ -83,12 +84,8 @@ class WaterQualityClassifier:
             'turbidity': [turbidity]
         })
         
-        # Distance features
-        df["ph_distance"] = np.where(
-            df["ph"] < self.PH_MIN,
-            self.PH_MIN - df["ph"],
-            np.where(df["ph"] > self.PH_MAX, df["ph"] - self.PH_MAX, 0)
-        )
+        # Distance features: only penalize pH when < 6.5 (acidic). pH >= 6.5 is good.
+        df["ph_distance"] = np.where(df["ph"] < self.PH_MIN, self.PH_MIN - df["ph"], 0)
         df["tds_distance"] = np.maximum(0, df["tds"] - self.TDS_MAX)
         df["turbidity_distance"] = np.maximum(0, df["turbidity"] - self.TURB_MAX)
         
@@ -261,11 +258,11 @@ class WaterQualityClassifier:
                         water_samples.append(sample)
                         continue
                     
-                    # Prepare data for classification (only ph, tds, turbidity)
+                    # Prepare data for classification (only ph, tds, turbidity; case-insensitive)
                     classification_data = {
-                        'ph': sensors['ph'],
-                        'tds': sensors['tds'],
-                        'turbidity': sensors['turbidity']
+                        'ph': float(sensors.get('pH') or sensors.get('ph', 0)),
+                        'tds': float(sensors.get('TDS') or sensors.get('tds', 0)),
+                        'turbidity': float(sensors.get('Turbidity') or sensors.get('turbidity', 0))
                     }
                     
                     # Classify
