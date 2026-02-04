@@ -1,18 +1,9 @@
 FROM python:3.11-slim
 
-# Install git + git-lfs
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git git-lfs \
-    && git lfs install \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
-# Copy repo
+# Copy repo (run `git lfs pull` on the host before building so real files are in the context)
 COPY . .
-
-# Pull LFS objects (this replaces the 131-byte pointer with the real file)
-RUN git lfs pull
 
 # Install deps
 RUN pip install --no-cache-dir -r requirements.txt
