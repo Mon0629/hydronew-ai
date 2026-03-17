@@ -1,6 +1,7 @@
 
 
 import os
+import sys
 import paho.mqtt.client as mqtt
 import json
 import logging
@@ -11,10 +12,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Configure logging
+# Configure logging - use stdout so Railway shows normal (non-red) logs instead of stderr
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,6 @@
 import yaml
 import logging
+import sys
 from pathlib import Path
 from typing import Any, Dict
 import os
@@ -12,7 +13,8 @@ def setup_logging(log_file: str = "logs/app.log", level: str = "INFO") -> None:
         level=getattr(logging, level.upper(), logging.INFO),
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
-    logging.getLogger().addHandler(logging.StreamHandler())
+    # Use stdout so deployment logs appear normal (not red) on Railway/Docker
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 # --- Config loader ---
 def load_config(config_path: str = "src/config/config.yaml") -> Dict[str, Any]:
