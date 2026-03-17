@@ -39,13 +39,16 @@ RUN set -eux; \
         echo "No requirements.txt or pyproject.toml found, skipping dependency installation"; \
     fi
 
+# Train model during build (Option A) - ensures model matches runtime library versions
+# Requires data/raw/water_data_quality.csv in repo. Migrate from LFS: git lfs migrate export --include="data/*,models/*" --everything
+RUN python run_pipeline.py train
+
 # Ensure app files owned by non-root user
 RUN chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE ${PORT}
 
-# Default startup:
-# tries (in order): python -m app, python app.py, uvicorn app.main:app on PORT
+# Run Hydronew AI classification service
 ENTRYPOINT ["sh", "-c"]
-CMD ["python -m app || python app.py || uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["python run_pipeline.py classify"]

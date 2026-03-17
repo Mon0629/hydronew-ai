@@ -1,3 +1,4 @@
-data/* filter=lfs diff=lfs merge=lfs -text
-models/* filter=lfs diff=lfs merge=lfs -text
+# data/* and models/* removed from LFS - Railway does not pull LFS files.
+# Run: git lfs migrate export --include="data/*,models/*" --everything
+# to convert existing LFS files to regular commits before deploying.
 experiments/mlruns/* filter=lfs diff=lfs merge=lfs -text

@@ -1,10 +1,15 @@
 
 
+import os
 import paho.mqtt.client as mqtt
 import json
 import logging
 from typing import Callable, Optional
 import time
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -16,21 +21,19 @@ logger = logging.getLogger(__name__)
 
 class MQTTClient:
 
-    
     def __init__(
         self,
-        broker: str = "960858f8c9cd49548edc44f8b9fac4e9.s1.eu.hivemq.cloud",
-        port: int = 8883,
-        username: str = "Biotech",
-        password: str = "Momorevillame24",
-        client_id: str = "hydronew_ai_classification"
+        broker: str = None,
+        port: int = None,
+        username: str = None,
+        password: str = None,
+        client_id: str = None
     ):
-
-        self.broker = broker
-        self.port = port
-        self.username = username
-        self.password = password
-        self.client_id = client_id
+        self.broker = broker or os.getenv("MQTT_BROKER", "960858f8c9cd49548edc44f8b9fac4e9.s1.eu.hivemq.cloud")
+        self.port = port if port is not None else int(os.getenv("MQTT_PORT", "8883"))
+        self.username = username or os.getenv("MQTT_USERNAME", "Biotech")
+        self.password = password or os.getenv("MQTT_PASSWORD", "Momorevillame24")
+        self.client_id = client_id or os.getenv("MQTT_CLIENT_ID", "hydronew_ai_classification")
         
         # Initialize MQTT client
         self.client = mqtt.Client(client_id=self.client_id, protocol=mqtt.MQTTv311)
